@@ -1,4 +1,5 @@
 import { BaseSearcher } from "./base-searcher.mts";
+import { summarizeSearchResult } from "./summarizer.mts";
 
 export class TavilySearcher extends BaseSearcher {
     private apiKey: string;
@@ -44,33 +45,38 @@ export class TavilySearcher extends BaseSearcher {
       });
       
       const searchResults = await Promise.all(searchPromises);
-      
       let formattedOutput = "Search results: \n\n";
       
-      const uniqueResults = new Map();
-      for (const response of searchResults) {
-        if (!response || !response.results) continue;
-        
-        for (const result of response.results) {
-          if (!uniqueResults.has(result.url)) {
-            uniqueResults.set(result.url, result);
-          }
-        }
-      }
+      type ResultEntry = { title: string, summary: string };
+      
+      const summarizedResults = new Map<string, ResultEntry>(
+        await Promise.all(
+          searchResults
+            .flatMap(response => response?.results || [])
+            .filter((result, index, array) => 
+              array.findIndex(r => r.url === result.url) === index
+            )
+            .map(async result => {
+              const contentToSummarize = result.raw_content || result.content;
+              const summary = await summarizeSearchResult(contentToSummarize);
+              return [result.url, {
+                title: result.title,
+                summary
+              }] as [string, ResultEntry];
+            })
+        )
+      );
       
       let index = 1;
-      for (const [url, result] of uniqueResults.entries()) {
+      for (const [url, result] of summarizedResults.entries()) {
         formattedOutput += `\n\n--- SOURCE ${index}: ${result.title} ---\n`;
         formattedOutput += `URL: ${url}\n\n`;
-        formattedOutput += `SUMMARY:\n${result.content}\n\n`;
-        if (result.raw_content) {
-          formattedOutput += `FULL CONTENT:\n${result.raw_content.slice(0, 30000)}`; // Limit content size
-        }
+        formattedOutput += `${result.summary}\n`;
         formattedOutput += "\n\n" + "-".repeat(80) + "\n";
         index++;
       }
       
-      if (uniqueResults.size > 0) {
+      if (summarizedResults.size > 0) {
         return formattedOutput;
       } else {
         return "No valid search results found. Please try different search queries or use a different search API.";

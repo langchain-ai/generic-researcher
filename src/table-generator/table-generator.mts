@@ -20,7 +20,7 @@ const rowResearcherGraph = rowResearcher.compile();
 const tableGenerator = new StateGraph(TableGeneratorState)
     .addNode("Extract Table Schema", extractTableSchema)
     .addNode("Generate Initial Search Queries", generateInitialSearchQueries)
-    .addNode("Search for Base Rows", searchForBaseRows)
+    .addNode("Search for Base Rows", searchForBaseRows, {ends: ["Row Researcher"]})
     .addNode("Row Researcher", rowResearcherGraph)
     .addNode("Gather Row Updates", gatherRowUpdates)
     .addEdge(START, "Extract Table Schema")
@@ -31,7 +31,7 @@ const tableGenerator = new StateGraph(TableGeneratorState)
     .addEdge("Gather Row Updates", END);
 
 // const checkpointer = new MemorySaver();
-const tableGeneratorGraph = tableGenerator.compile();
+export const tableGeneratorGraph = tableGenerator.compile();
 
 // const question1 = "Who are the top tennis players in the world?";
 // const result = await tableGeneratorGraph.invoke({ question: question1 });

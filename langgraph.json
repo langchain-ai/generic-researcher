@@ -3,7 +3,7 @@
     "dockerfile_lines": [],
     "dependencies": ["."],
     "graphs": {
-      "table-generator": "./src/table-generator/table-generator.mts:tableGenerator"
+      "table-generator": "./src/table-generator/table-generator.mts:tableGeneratorGraph"
     },
     "env": ".env"
   }

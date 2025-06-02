@@ -1,4 +1,4 @@
-import { llm } from "../src/table-generator/const.mts";
+import { llm, summarizerLlm } from "../src/table-generator/const.mts";
 import {testInput} from "./test_const.mts";
 import { buildDynamicTableSchema } from "../src/table-generator/types.mts";
 import { config } from "dotenv";
@@ -66,27 +66,27 @@ const state = {
     "attempts": 0
   }
 
-// const dynamicSchema = buildDynamicTableSchema(state.primaryKey, state.criteria, state.additionalColumns)
-// const structuredLlm = llm.withStructuredOutput(z.object({
-//     result: dynamicSchema
-// }))
+const dynamicSchema = buildDynamicTableSchema(state.primaryKey, state.criteria, state.additionalColumns)
+const structuredLlm = summarizerLlm.withStructuredOutput(z.object({
+    result: dynamicSchema
+}))
 
-// const structuredResponse = await structuredLlm.invoke(testInput)
-// console.log(structuredResponse)
+const structuredResponse = await structuredLlm.invoke(testInput)
+console.log(structuredResponse)
 
-const row ={
-    "player_id": "z355",
-    "ranking": 3,
-    "player_name": "Alexander Zverev",
-    "ranking_points": 7285,
-    "age": 28,
-    "country": "Germany",
-    "grand_slams_won": 0,
-    "playing_hand": "Right-handed (two-handed backhand)"
-  }
+// const row ={
+//     "player_id": "z355",
+//     "ranking": 3,
+//     "player_name": "Alexander Zverev",
+//     "ranking_points": 7285,
+//     "age": 28,
+//     "country": "Germany",
+//     "grand_slams_won": 0,
+//     "playing_hand": "Right-handed (two-handed backhand)"
+//   }
 
 
-const schemaFields = [...state.criteria, ...state.additionalColumns].map(col => col.name);
-console.log(schemaFields)
-const missingKeys = schemaFields.filter(key => !(key in row))
-console.log(missingKeys)
+// const schemaFields = [...state.criteria, ...state.additionalColumns].map(col => col.name);
+// console.log(schemaFields)
+// const missingKeys = schemaFields.filter(key => !(key in row))
+// console.log(missingKeys)
