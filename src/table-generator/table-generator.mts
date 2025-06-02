@@ -33,6 +33,6 @@ const tableGenerator = new StateGraph(TableGeneratorState)
 // const checkpointer = new MemorySaver();
 const tableGeneratorGraph = tableGenerator.compile();
 
-const question1 = "Who are the top tennis players in the world?";
-const result = await tableGeneratorGraph.invoke({ question: question1 });
-console.log(result);
+// const question1 = "Who are the top tennis players in the world?";
+// const result = await tableGeneratorGraph.invoke({ question: question1 });
+// console.log(result);
