@@ -6,10 +6,11 @@ import { buildDynamicTableSchema, Column } from "./types.mts";
 import { selectAndExecuteSearch } from "../search/search.mts";
 import { z } from "zod";
 import { Send, Command, END } from "@langchain/langgraph";
+import { RunnableConfig } from "@langchain/core/runnables";
 
 // Table Generator Nodes
 
-export async function extractTableSchema(state: typeof TableGeneratorState.State) {
+export async function extractTableSchema(state: typeof TableGeneratorState.State, config?: RunnableConfig) {
     const { question } = state;
     const extractionLlm = llm.withStructuredOutput(TableExtractionSchema).withRetry(RETRY_CONFIG);
     const extractionPrompt = getExtractTableSchemaPrompt(question);

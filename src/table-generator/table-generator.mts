@@ -26,6 +26,9 @@ const rowResearcher = new StateGraph({
     .addEdge("Generate Queries for Entity", "Update Entity Columns")
 const rowResearcherGraph = rowResearcher.compile();
 
+const runnableConfig = {
+    maxConcurrency: 10
+}
 const tableGenerator = new StateGraph(TableGeneratorState)
     .addNode("Extract Table Schema", extractTableSchema)
     .addNode("Base Row Generator", baseRowGeneratorGraph)
