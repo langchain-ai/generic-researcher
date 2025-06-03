@@ -110,11 +110,11 @@ export async function searchForBaseRows(state: typeof BaseRowGeneratorState.Stat
 
     console.log(`New parsed rows: ${Object.keys(newParsedRows).join(", ")}`)
     console.log(`New parsed rows length: ${Object.keys(newParsedRows).length}`)
-    console.log(`Total rows: ${Object.keys(rows || {}).length}`)
     const totalRows = {
         ...rows,
         ...newParsedRows
     }
+    console.log(`Total rows: ${Object.keys(totalRows || {}).length}`)
 
     return {
         rows: totalRows
@@ -149,7 +149,7 @@ export async function generateQueriesForEntity(state: typeof RowResearcherState.
     const generatorResponse = await generatorLlm.invoke(generatorPrompt)
 
     return {
-        entitySearchQueries: generatorResponse.queries.map(q => q.searchQuery)
+        entitySearchQueries: generatorResponse ? generatorResponse.queries.map(q => q.searchQuery) : []
     }
 }
 

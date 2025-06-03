@@ -129,5 +129,7 @@ export function getParseEntitySearchResultsPrompt(rowString: string, searchResul
     ${criteria.map(c => `${c.name} (${c.type}) - ${c.description}`).join("\n")}
 
     Try not to overwrite any existing information in the entity unless there is an explicit conflict and you are very confident in the new information.
-    Your job is mostly to fill in the missing information, and then return the full object as an update.`
+    Your job is mostly to fill in the missing information, and then return the full object as an update.
+    
+    It's okay if you don't know what all the fields are, the criteria fields are all optional, so return null if you don't have the answer.`
 }
