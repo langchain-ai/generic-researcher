@@ -1,9 +1,9 @@
 import { SummarizedSearchResultSchema } from "./types.mts";
-import { summarizerLlm } from "../table-generator/const.mts";
+import { summarizerLlm, RETRY_CONFIG } from "../table-generator/const.mts";
 
 export async function summarizeSearchResult(rawSearchResult: string) {
     try {
-        const structuredSummarizerLlm = summarizerLlm.withStructuredOutput(SummarizedSearchResultSchema)
+        const structuredSummarizerLlm = summarizerLlm.withStructuredOutput(SummarizedSearchResultSchema).withRetry(RETRY_CONFIG)
         const response = await structuredSummarizerLlm.invoke(getSummarizerPrompt(rawSearchResult))
         const excerpts_str = response.key_excerpts.map(e => `- ${e}`).join("\n")
         return `<summary>\n${response.summarized_content}\n</summary>\n\n<key_excerpts>\n${excerpts_str}\n</key_excerpts>`

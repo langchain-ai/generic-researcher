@@ -1,7 +1,7 @@
 import { TableGeneratorState, RowResearcherState } from "./state.mts";
 import { TableExtractionSchema, SearchQueriesSchema } from "./types.mts";
 import { getExtractTableSchemaPrompt, getGenerateInitialSearchQueriesPrompt, getParseSearchResultsPrompt, getGenerateEntitySearchQueriesPrompt, getParseEntitySearchResultsPrompt } from "./prompts.mts";
-import { llm, MAX_SEARCH_ITERATIONS_PER_ROW } from "./const.mts";
+import { llm, MAX_SEARCH_ITERATIONS_PER_ROW, RETRY_CONFIG } from "./const.mts";
 import { buildDynamicTableSchema, Column } from "./types.mts";
 import { selectAndExecuteSearch } from "../search/search.mts";
 import { z } from "zod";
@@ -11,7 +11,7 @@ import { Send, Command, END } from "@langchain/langgraph";
 
 export async function extractTableSchema(state: typeof TableGeneratorState.State) {
     const { question } = state;
-    const extractionLlm = llm.withStructuredOutput(TableExtractionSchema);
+    const extractionLlm = llm.withStructuredOutput(TableExtractionSchema).withRetry(RETRY_CONFIG);
     const extractionPrompt = getExtractTableSchemaPrompt(question);
     const extractionResponse = await extractionLlm.invoke(extractionPrompt);
 
@@ -25,7 +25,7 @@ export async function extractTableSchema(state: typeof TableGeneratorState.State
 export async function generateInitialSearchQueries(state: typeof TableGeneratorState.State) {
     const { question, primaryKey, criteria, additionalColumns } = state;
 
-    const generatorLlm = llm.withStructuredOutput(SearchQueriesSchema)
+    const generatorLlm = llm.withStructuredOutput(SearchQueriesSchema).withRetry(RETRY_CONFIG)
     const generatorPrompt = getGenerateInitialSearchQueriesPrompt(question, primaryKey, criteria, additionalColumns)
     const generatorResponse = await generatorLlm.invoke(generatorPrompt)
 
@@ -41,7 +41,7 @@ export async function searchForBaseRows(state: typeof TableGeneratorState.State)
     const entitySchema = buildDynamicTableSchema(primaryKey, criteria, additionalColumns)
     const parserLlm = llm.withStructuredOutput(z.object({
         results: z.array(entitySchema)
-    })) 
+    })).withRetry(RETRY_CONFIG)
     const parserPrompt = getParseSearchResultsPrompt(baseResearchResults, primaryKey, criteria, additionalColumns)
     const parserResponse = await parserLlm.invoke(parserPrompt)
 
@@ -100,7 +100,7 @@ export async function generateQueriesForEntity(state: typeof RowResearcherState.
     const missingAdditionalColumns: Column[] = additionalColumns.filter(c => missingKeys.includes(c.name))
     const missingCriteriaAndAdditionalColumns: Column[] = [...missingCriteria, ...missingAdditionalColumns]
 
-    const generatorLlm = llm.withStructuredOutput(SearchQueriesSchema)
+    const generatorLlm = llm.withStructuredOutput(SearchQueriesSchema).withRetry(RETRY_CONFIG)
     const rowString = JSON.stringify(row, null, 2)
     const generatorPrompt = getGenerateEntitySearchQueriesPrompt(rowString, missingCriteriaAndAdditionalColumns)
     const generatorResponse = await generatorLlm.invoke(generatorPrompt)
@@ -116,7 +116,7 @@ export async function updateEntityColumns(state: typeof RowResearcherState.State
     const entitySchema = buildDynamicTableSchema(primaryKey, criteria, additionalColumns)
     const parserLlm = llm.withStructuredOutput(z.object({
         result: entitySchema
-    }));
+    })).withRetry(RETRY_CONFIG);
     const parserPrompt = getParseEntitySearchResultsPrompt(JSON.stringify(row, null, 2), searchResults, primaryKey, criteria, additionalColumns)
     const parserResponse = await parserLlm.invoke(parserPrompt)
 

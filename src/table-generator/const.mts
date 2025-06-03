@@ -6,3 +6,7 @@ export const summarizerLlm = await initChatModel("claude-3-5-haiku-latest");
 
 
 export const MAX_SEARCH_ITERATIONS_PER_ROW = 2;
+
+export const RETRY_CONFIG = {
+    stopAfterAttempt: 2,
+}

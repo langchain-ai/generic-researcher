@@ -1,4 +1,4 @@
-import { llm, summarizerLlm } from "../src/table-generator/const.mts";
+import { llm, summarizerLlm, RETRY_CONFIG } from "../src/table-generator/const.mts";
 import {testInput} from "./test_const.mts";
 import { buildDynamicTableSchema } from "../src/table-generator/types.mts";
 import { config } from "dotenv";
@@ -69,7 +69,7 @@ const state = {
 const dynamicSchema = buildDynamicTableSchema(state.primaryKey, state.criteria, state.additionalColumns)
 const structuredLlm = summarizerLlm.withStructuredOutput(z.object({
     result: dynamicSchema
-}))
+})).withRetry(RETRY_CONFIG)
 
 const structuredResponse = await structuredLlm.invoke(testInput)
 console.log(structuredResponse)
