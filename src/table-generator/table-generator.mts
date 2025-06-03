@@ -26,7 +26,7 @@ const tableGenerator = new StateGraph(TableGeneratorState)
     .addEdge(START, "Extract Table Schema")
     .addEdge("Extract Table Schema", "Generate Initial Search Queries")
     .addEdge("Generate Initial Search Queries", "Search for Base Rows")
-    .addConditionalEdges("Search for Base Rows", kickOffRowResearch)
+    .addConditionalEdges("Search for Base Rows", kickOffRowResearch, {true: "Row Researcher"})
     .addEdge("Row Researcher", "Gather Row Updates")
     .addEdge("Gather Row Updates", END);
 
