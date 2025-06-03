@@ -26,7 +26,7 @@ export function buildDynamicTableSchema(
     const schemaFields: Record<string, z.ZodTypeAny> = {};
     schemaFields[primaryKey.name] = getZodType(primaryKey.type);
     for (const column of criteria) {
-        schemaFields[column.name] = getZodType(column.type).optional();
+        schemaFields[column.name] = getZodType(column.type).nullable().optional();
     }
     return z.object(schemaFields);
 }

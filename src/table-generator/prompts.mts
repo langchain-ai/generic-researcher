@@ -72,7 +72,7 @@ export function getParseSearchResultsPrompt(question: string, searchResults: str
 
     You should parse the search results and return the base rows.
     The base rows should be a list of objects, where each object is a row in the table.
-    Each object should have the same keys as the schema, but right now it's okay for most of the fields to be missing or null.
+    Each object should have the same keys as the schema, but right now it's okay for most of the fields to be missing.
     You should try to add as many rows with a unique primary key as possible, don't worry about filling out columns right now.
 
     Make sure that the base rows are valid according to the schema.
@@ -95,7 +95,7 @@ export function getParseAdditionalSearchResultsPrompt(question: string, searchRe
 
     You should parse the search results and ONLY return the base rows that are not already in the table.
     The base rows should be a list of objects, where each object is a row in the table.
-    Each object should have the same keys as the schema, but right now it's okay for some of the fields to be missing or null.
+    Each object should have the same keys as the schema, but right now it's okay for some of the fields to be missing.
 
     Make sure that the base rows are valid according to the schema.
     Really make sure that there are no duplicate rows in the base rows. There will likely be many duplicates in the search results, but each should only get a single row entry.
@@ -131,5 +131,5 @@ export function getParseEntitySearchResultsPrompt(rowString: string, searchResul
     Try not to overwrite any existing information in the entity unless there is an explicit conflict and you are very confident in the new information.
     Your job is mostly to fill in the missing information, and then return the full object as an update.
     
-    It's okay if you don't know what all the fields are, the criteria fields are all optional, so return null if you don't have the answer.`
+    It's okay if you don't know what all the fields are, the criteria fields are all optional, if you don't know the answer, just don't return the field. DO NOT return the field with a "filler" value in it. Just don't return the field if you don't know the value!`
 }
