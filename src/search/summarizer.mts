@@ -27,6 +27,7 @@ Please follow these guidelines to create your summary:
 5. Preserve any lists or step-by-step instructions if present.
 6. Include relevant dates, names, and locations that are crucial to understanding the content.
 7. Summarize lengthy explanations while keeping the core message intact.
+8. If the content is a list, make sure that each list item is preserved individually in the summary!
 When handling different types of content:
 - For news articles: Focus on the who, what, when, where, why, and how.
 - For scientific content: Preserve methodology, results, and conclusions.

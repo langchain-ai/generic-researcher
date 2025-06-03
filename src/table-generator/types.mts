@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const MinRequiredRowsSchema = z.object({
+    minRequiredRows: z.number()
+});
+export type MinRequiredRows = z.infer<typeof MinRequiredRowsSchema>;
+
 export const ColumnSchema = z.object({
     name: z.string(),
     description: z.string(),
@@ -10,7 +15,6 @@ export type Column = z.infer<typeof ColumnSchema>;
 export const TableExtractionSchema = z.object({
     primaryKey: ColumnSchema,
     criteria: z.array(ColumnSchema),
-    additionalColumns: z.array(ColumnSchema),
 });
 
 export type TableExtraction = z.infer<typeof TableExtractionSchema>;
@@ -18,14 +22,10 @@ export type TableExtraction = z.infer<typeof TableExtractionSchema>;
 export function buildDynamicTableSchema(
     primaryKey: Column,
     criteria: Column[],
-    additionalColumns: Column[]
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
     const schemaFields: Record<string, z.ZodTypeAny> = {};
     schemaFields[primaryKey.name] = getZodType(primaryKey.type);
     for (const column of criteria) {
-        schemaFields[column.name] = getZodType(column.type);
-    }
-    for (const column of additionalColumns) {
         schemaFields[column.name] = getZodType(column.type).optional();
     }
     return z.object(schemaFields);

@@ -1,16 +1,25 @@
 import { config } from "dotenv";
-import { TableGeneratorState, RowResearcherState, RowResearcherOutputState } from "./state.mts";
-import { extractTableSchema, generateInitialSearchQueries, searchForBaseRows, generateQueriesForEntity, updateEntityColumns, gatherRowUpdates, kickOffRowResearch } from "./nodes.mts";
+import { TableGeneratorState, RowResearcherState, RowResearcherOutputState, BaseRowGeneratorState, BaseRowGeneratorOutputState } from "./state.mts";
+import { extractTableSchema, generateBaseRowSearchQueries, searchForBaseRows, generateQueriesForEntity, updateEntityColumns, gatherRowUpdates, kickOffRowResearch, checkBaseRowSearchExitConditions } from "./nodes.mts";
 import { START, END, StateGraph, MemorySaver } from "@langchain/langgraph";
 
 config();
 
-const rowResearcher = new StateGraph(
-    {
-        stateSchema: RowResearcherState,
-        output: RowResearcherOutputState
-    }
-)
+const baseRowGenerator = new StateGraph({
+    stateSchema: BaseRowGeneratorState,
+    output: BaseRowGeneratorOutputState
+})
+    .addNode("Generate Base Row Search Queries", generateBaseRowSearchQueries)
+    .addNode("Search for Base Rows", searchForBaseRows)
+    .addEdge(START, "Generate Base Row Search Queries")
+    .addEdge("Generate Base Row Search Queries", "Search for Base Rows")
+    .addConditionalEdges("Search for Base Rows", checkBaseRowSearchExitConditions)
+const baseRowGeneratorGraph = baseRowGenerator.compile();
+
+const rowResearcher = new StateGraph({
+    stateSchema: RowResearcherState,
+    output: RowResearcherOutputState
+})
     .addNode("Generate Queries for Entity", generateQueriesForEntity)
     .addNode("Update Entity Columns", updateEntityColumns, {ends: ["Generate Queries for Entity", END]})
     .addEdge(START, "Generate Queries for Entity")
@@ -19,14 +28,12 @@ const rowResearcherGraph = rowResearcher.compile();
 
 const tableGenerator = new StateGraph(TableGeneratorState)
     .addNode("Extract Table Schema", extractTableSchema)
-    .addNode("Generate Initial Search Queries", generateInitialSearchQueries)
-    .addNode("Search for Base Rows", searchForBaseRows, {ends: ["Row Researcher"]})
+    .addNode("Base Row Generator", baseRowGeneratorGraph)
     .addNode("Row Researcher", rowResearcherGraph)
     .addNode("Gather Row Updates", gatherRowUpdates)
     .addEdge(START, "Extract Table Schema")
-    .addEdge("Extract Table Schema", "Generate Initial Search Queries")
-    .addEdge("Generate Initial Search Queries", "Search for Base Rows")
-    .addConditionalEdges("Search for Base Rows", kickOffRowResearch, {true: "Row Researcher"})
+    .addEdge("Extract Table Schema", "Base Row Generator")
+    .addConditionalEdges("Base Row Generator", kickOffRowResearch, {true: "Row Researcher"})
     .addEdge("Row Researcher", "Gather Row Updates")
     .addEdge("Gather Row Updates", END);
 

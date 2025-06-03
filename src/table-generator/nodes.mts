@@ -1,7 +1,7 @@
-import { TableGeneratorState, RowResearcherState } from "./state.mts";
-import { TableExtractionSchema, SearchQueriesSchema } from "./types.mts";
-import { getExtractTableSchemaPrompt, getGenerateInitialSearchQueriesPrompt, getParseSearchResultsPrompt, getGenerateEntitySearchQueriesPrompt, getParseEntitySearchResultsPrompt } from "./prompts.mts";
-import { llm, MAX_SEARCH_ITERATIONS_PER_ROW, RETRY_CONFIG } from "./const.mts";
+import { TableGeneratorState, RowResearcherState, BaseRowGeneratorState } from "./state.mts";
+import { TableExtractionSchema, SearchQueriesSchema, MinRequiredRowsSchema } from "./types.mts";
+import { getExtractTableSchemaPrompt, getGenerateInitialSearchQueriesPrompt, getParseSearchResultsPrompt, getGenerateEntitySearchQueriesPrompt, getParseEntitySearchResultsPrompt, getMinRequiredRowsPrompt, getGenerateAdditionalSearchQueriesPrompt, getParseAdditionalSearchResultsPrompt } from "./prompts.mts";
+import { llm, MAX_SEARCH_ITERATIONS_PER_ROW, MAX_BASE_ROW_SEARCH_ITERATIONS, RETRY_CONFIG } from "./const.mts";
 import { buildDynamicTableSchema, Column } from "./types.mts";
 import { selectAndExecuteSearch } from "../search/search.mts";
 import { z } from "zod";
@@ -18,65 +18,25 @@ export async function extractTableSchema(state: typeof TableGeneratorState.State
     return {
         primaryKey: extractionResponse.primaryKey,
         criteria: extractionResponse.criteria,
-        additionalColumns: extractionResponse.additionalColumns,
-    }
-}
-
-export async function generateInitialSearchQueries(state: typeof TableGeneratorState.State) {
-    const { question, primaryKey, criteria, additionalColumns } = state;
-
-    const generatorLlm = llm.withStructuredOutput(SearchQueriesSchema).withRetry(RETRY_CONFIG)
-    const generatorPrompt = getGenerateInitialSearchQueriesPrompt(question, primaryKey, criteria, additionalColumns)
-    const generatorResponse = await generatorLlm.invoke(generatorPrompt)
-
-    return {
-        rowSearchQueries: generatorResponse.queries.map(q => q.searchQuery)
-    }
-}
-
-export async function searchForBaseRows(state: typeof TableGeneratorState.State) {
-    const { rowSearchQueries, primaryKey, criteria, additionalColumns } = state;
-    const baseResearchResults = await selectAndExecuteSearch("tavily", rowSearchQueries);
-
-    const entitySchema = buildDynamicTableSchema(primaryKey, criteria, additionalColumns)
-    const parserLlm = llm.withStructuredOutput(z.object({
-        results: z.array(entitySchema)
-    })).withRetry(RETRY_CONFIG)
-    const parserPrompt = getParseSearchResultsPrompt(baseResearchResults, primaryKey, criteria, additionalColumns)
-    const parserResponse = await parserLlm.invoke(parserPrompt)
-
-    if (!parserResponse?.results?.length) {
-        console.error('No valid results parsed from search');
-        return { rows: {} };
-    }
-
-    return {
-        rows: parserResponse.results.reduce((acc, row) => {
-            if (row && row[primaryKey.name]) {
-                acc[row[primaryKey.name]] = row;
-            } else {
-                console.error('Invalid row data:', row);
-            }
-            return acc;
-        }, {} as { [key: string]: z.ZodObject<Record<string, z.ZodTypeAny>> })
     }
 }
 
 export function kickOffRowResearch(state: typeof TableGeneratorState.State) {
-    const { rows, primaryKey, criteria, additionalColumns } = state;
+    const { rows, primaryKey, criteria } = state;
     
     if (!rows || !Object.keys(rows).length) {
         console.error('No valid rows to research');
         return [];
     }
 
+    const allKeys = [primaryKey.name, ...criteria.map(col => col.name)];
+
     return Object.values(rows)
-        .filter(row => row && row[primaryKey.name])
+        .filter(row => row && row[primaryKey.name] && !allKeys.every(key => key in row))
         .map(row => new Send("Row Researcher", {
             row: row,
             primaryKey: primaryKey,
             criteria: criteria,
-            additionalColumns: additionalColumns,
             attempts: 0
         }))
 }
@@ -89,20 +49,102 @@ export async function gatherRowUpdates(state: typeof RowResearcherState.State) {
     return {}
 }
 
+// Base Row Generator Nodes
+
+export async function generateBaseRowSearchQueries(state: typeof BaseRowGeneratorState.State) {
+    const { question, primaryKey, criteria, rows, historicalRowSearchQueries, researchAttempts = 0, minRequiredRows } = state;
+
+    const stateUpdate = {
+        researchAttempts: researchAttempts + 1
+    }
+
+    if (!minRequiredRows || minRequiredRows == 0) {
+        const minRequiredRowsLlm = llm.withStructuredOutput(MinRequiredRowsSchema).withRetry(RETRY_CONFIG)
+        const minRequiredRowsPrompt = getMinRequiredRowsPrompt(question)
+        const minRequiredRowsResponse = await minRequiredRowsLlm.invoke(minRequiredRowsPrompt)
+        stateUpdate["minRequiredRows"] = minRequiredRowsResponse.minRequiredRows;
+    }
+
+    const generatorPrompt = (!rows ||Object.keys(rows).length == 0) ? 
+        getGenerateInitialSearchQueriesPrompt(question, primaryKey, criteria) :
+        getGenerateAdditionalSearchQueriesPrompt(question, primaryKey, criteria, rows, historicalRowSearchQueries)
+
+    const generatorLlm = llm.withStructuredOutput(SearchQueriesSchema).withRetry(RETRY_CONFIG)
+    const generatorResponse = await generatorLlm.invoke(generatorPrompt)
+    const rowSearchQueries = generatorResponse.queries.map(q => q.searchQuery)
+
+    stateUpdate["currentRowSearchQueries"] = rowSearchQueries
+    stateUpdate["historicalRowSearchQueries"] = rowSearchQueries
+
+    return stateUpdate
+}
+
+export async function searchForBaseRows(state: typeof BaseRowGeneratorState.State) {
+    const { question, currentRowSearchQueries, primaryKey, criteria, rows } = state;
+    const baseResearchResults = await selectAndExecuteSearch("tavily", currentRowSearchQueries);
+
+    const entitySchema = buildDynamicTableSchema(primaryKey, criteria)
+    const parserLlm = llm.withStructuredOutput(z.object({
+        results: z.array(entitySchema)
+    })).withRetry(RETRY_CONFIG)
+
+    const parserPrompt = (!rows ||Object.keys(rows).length == 0) ? 
+        getParseSearchResultsPrompt(question, baseResearchResults, primaryKey, criteria) :
+        getParseAdditionalSearchResultsPrompt(question, baseResearchResults, primaryKey, criteria, rows)
+    const parserResponse = await parserLlm.invoke(parserPrompt)
+
+    if (!parserResponse?.results?.length) {
+        console.error('No valid results parsed from search');
+        return { rows: {} };
+    }
+
+    const newParsedRows = parserResponse.results.reduce((acc, row) => {
+        if (row && row[primaryKey.name]) {
+            acc[row[primaryKey.name]] = row;
+        } else {
+            console.error('Invalid row data:', row);
+        }
+        return acc;
+    }, {} as { [key: string]: z.ZodObject<Record<string, z.ZodTypeAny>> })
+
+    console.log(`New parsed rows: ${Object.keys(newParsedRows).join(", ")}`)
+    console.log(`New parsed rows length: ${Object.keys(newParsedRows).length}`)
+    console.log(`Total rows: ${Object.keys(rows || {}).length}`)
+    const totalRows = {
+        ...rows,
+        ...newParsedRows
+    }
+
+    return {
+        rows: totalRows
+    }
+}
+
+export function checkBaseRowSearchExitConditions(state: typeof BaseRowGeneratorState.State) {
+    const { rows, minRequiredRows, researchAttempts } = state;
+    if (!minRequiredRows || minRequiredRows == 0) {
+        return "Generate Base Row Search Queries";
+    }
+    if (researchAttempts >= MAX_BASE_ROW_SEARCH_ITERATIONS || Object.keys(rows).length >= minRequiredRows) {
+        console.log(`Base row search exit conditions met: ${Object.keys(rows).length} >= ${minRequiredRows} or ${researchAttempts} > ${MAX_BASE_ROW_SEARCH_ITERATIONS}`)
+        return END;
+    }
+    console.log(`Base row search exit conditions not met: ${Object.keys(rows).length} < ${minRequiredRows} and ${researchAttempts} <= ${MAX_BASE_ROW_SEARCH_ITERATIONS}`)
+    return "Generate Base Row Search Queries";
+}
+
 // Row Researcher Nodes
 
 export async function generateQueriesForEntity(state: typeof RowResearcherState.State) {
-    const { row, criteria, additionalColumns } = state;
+    const { row, criteria } = state;
     
-    const schemaFields = [...criteria, ...additionalColumns].map(col => col.name);
+    const schemaFields = [...criteria].map(col => col.name);
     const missingKeys = schemaFields.filter(key => !(key in row))
     const missingCriteria: Column[] = criteria.filter(c => missingKeys.includes(c.name))
-    const missingAdditionalColumns: Column[] = additionalColumns.filter(c => missingKeys.includes(c.name))
-    const missingCriteriaAndAdditionalColumns: Column[] = [...missingCriteria, ...missingAdditionalColumns]
 
     const generatorLlm = llm.withStructuredOutput(SearchQueriesSchema).withRetry(RETRY_CONFIG)
     const rowString = JSON.stringify(row, null, 2)
-    const generatorPrompt = getGenerateEntitySearchQueriesPrompt(rowString, missingCriteriaAndAdditionalColumns)
+    const generatorPrompt = getGenerateEntitySearchQueriesPrompt(rowString, missingCriteria)
     const generatorResponse = await generatorLlm.invoke(generatorPrompt)
 
     return {
@@ -111,16 +153,16 @@ export async function generateQueriesForEntity(state: typeof RowResearcherState.
 }
 
 export async function updateEntityColumns(state: typeof RowResearcherState.State) {
-    const { row, entitySearchQueries, primaryKey, criteria, additionalColumns } = state;
+    const { row, entitySearchQueries, primaryKey, criteria } = state;
     const searchResults = await selectAndExecuteSearch("tavily", entitySearchQueries);
-    const entitySchema = buildDynamicTableSchema(primaryKey, criteria, additionalColumns)
+    const entitySchema = buildDynamicTableSchema(primaryKey, criteria)
     const parserLlm = llm.withStructuredOutput(z.object({
         result: entitySchema
     })).withRetry(RETRY_CONFIG);
-    const parserPrompt = getParseEntitySearchResultsPrompt(JSON.stringify(row, null, 2), searchResults, primaryKey, criteria, additionalColumns)
+    const parserPrompt = getParseEntitySearchResultsPrompt(JSON.stringify(row, null, 2), searchResults, primaryKey, criteria)
     const parserResponse = await parserLlm.invoke(parserPrompt)
 
-    const schemaFields = [...criteria, ...additionalColumns].map(col => col.name);
+    const schemaFields = criteria.map(col => col.name);
     const updatedRow = {
         ...row,
         ...parserResponse.result
