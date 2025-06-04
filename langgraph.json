@@ -1,9 +1,9 @@
 {
-    "node_version": "20",
-    "dockerfile_lines": [],
-    "dependencies": ["."],
-    "graphs": {
-      "table-generator": "./src/table-generator/table-generator.mts:tableGeneratorGraph"
-    },
-    "env": ".env"
-  }
+  "node_version": "20",
+  "dockerfile_lines": [],
+  "dependencies": ["."],
+  "graphs": {
+    "table-generator": "./src/table-generator/table-generator.mts:tableGeneratorGraph"
+  },
+  "env": ".env"
+}

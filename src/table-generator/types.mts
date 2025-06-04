@@ -1,89 +1,71 @@
 import { z } from "zod";
 
 export const MinRequiredRowsSchema = z.object({
-    minRequiredRows: z.number()
+  minRequiredRows: z.number(),
 });
-export type MinRequiredRows = z.infer<typeof MinRequiredRowsSchema>;
 
 export const ColumnSchema = z.object({
-    name: z.string(),
-    description: z.string(),
-    type: z.string(),
+  name: z.string(),
+  description: z.string(),
+  type: z.string(),
 });
 export type Column = z.infer<typeof ColumnSchema>;
 
 export const TableExtractionSchema = z.object({
-    primaryKey: ColumnSchema,
-    criteria: z.array(ColumnSchema),
+  primaryKey: ColumnSchema,
+  criteria: z.array(ColumnSchema),
 });
 
-export type TableExtraction = z.infer<typeof TableExtractionSchema>;
+export type ValidSchemaType = "string" | "number" | "boolean" | "array";
+const TYPE_MAPPING: Record<ValidSchemaType, z.ZodTypeAny> = {
+  string: z.string(),
+  number: z.number(),
+  boolean: z.boolean(),
+  array: z.array(z.any()),
+} as const;
 
 export function buildDynamicTableSchema(
-    primaryKey: Column,
-    criteria: Column[],
+  primaryKey: Column,
+  criteria: Column[],
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
-    const schemaFields: Record<string, z.ZodTypeAny> = {};
-    schemaFields[primaryKey.name] = getZodType(primaryKey.type);
-    for (const column of criteria) {
-        schemaFields[column.name] = getZodType(column.type).nullable().optional();
-    }
-    return z.object(schemaFields);
+  const schemaFields: Record<string, z.ZodTypeAny> = {};
+  schemaFields[primaryKey.name] = getZodType(primaryKey.type);
+  for (const column of criteria) {
+    schemaFields[column.name] = getZodType(column.type).nullable().optional();
+  }
+  return z.object(schemaFields);
 }
 
 function getZodType(type: string): z.ZodTypeAny {
-    switch (type.toLowerCase()) {
-        case 'string':
-            return z.string();
-        case 'number':
-            return z.number();
-        case 'boolean':
-            return z.boolean();
-        case 'date':
-            return z.date();
-        case 'array':
-            return z.array(z.any());
-        default:
-            return z.any();
-    }
+  const normalizedType = type.toLowerCase() as ValidSchemaType;
+  return TYPE_MAPPING[normalizedType] ?? z.any();
 }
 
 export const SearchQuerySchema = z.object({
-    searchQuery: z.string(),
+  searchQuery: z.string(),
 });
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
-  
+
 export const SearchQueriesSchema = z.object({
-    queries: z.array(SearchQuerySchema),
+  queries: z.array(SearchQuerySchema),
 });
-  
 export type SearchQueries = z.infer<typeof SearchQueriesSchema>;
 
-export function zodSchemaToString(schema: z.ZodObject<Record<string, z.ZodTypeAny>>): string {
-    const fields = schema.shape;
-    const entries = Object.entries(fields);
-    
-    return entries.map(([key, value]) => {
-        let type = 'unknown';
-        if (value instanceof z.ZodString) type = 'string';
-        if (value instanceof z.ZodNumber) type = 'number';
-        if (value instanceof z.ZodBoolean) type = 'boolean';
-        if (value instanceof z.ZodDate) type = 'date';
-        if (value instanceof z.ZodArray) type = 'array';
-        if (value instanceof z.ZodOptional) {
-            const innerType = value._def.innerType;
-            type = `${zodTypeToString(innerType)} (optional)`;
-        }
-        
-        return `${key}: ${type}`;
-    }).join('\n');
+export function zodTypeToString(type: z.ZodTypeAny): string {
+  if (type instanceof z.ZodString) return "string";
+  if (type instanceof z.ZodNumber) return "number";
+  if (type instanceof z.ZodBoolean) return "boolean";
+  if (type instanceof z.ZodArray) return "array";
+  if (type instanceof z.ZodNullable) return `${zodTypeToString(type.unwrap())} (nullable)`;
+  if (type instanceof z.ZodOptional) return `${zodTypeToString(type.unwrap())} (optional)`;
+  return "unknown";
 }
 
-function zodTypeToString(type: z.ZodTypeAny): string {
-    if (type instanceof z.ZodString) return 'string';
-    if (type instanceof z.ZodNumber) return 'number';
-    if (type instanceof z.ZodBoolean) return 'boolean';
-    if (type instanceof z.ZodDate) return 'date';
-    if (type instanceof z.ZodArray) return 'array';
-    return 'unknown';
+export function zodSchemaToString(
+  schema: z.ZodObject<Record<string, z.ZodTypeAny>>,
+): string {
+  const fields = schema.shape;
+  return Object.entries(fields)
+    .map(([key, value]) => `${key}: ${zodTypeToString(value)}`)
+    .join("\n");
 }

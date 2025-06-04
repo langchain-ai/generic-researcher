@@ -1,20 +1,24 @@
 import { SummarizedSearchResultSchema } from "./types.mts";
-import { summarizerLlm, summarizerLlmOpenAI, RETRY_CONFIG } from "../table-generator/const.mts";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
-export async function summarizeSearchResult(rawSearchResult: string) {
-    try {
-        const structuredSummarizerLlm = summarizerLlmOpenAI.withStructuredOutput(SummarizedSearchResultSchema).withRetry(RETRY_CONFIG)
-        const response = await structuredSummarizerLlm.invoke(getSummarizerPrompt(rawSearchResult))
-        const excerpts_str = response.key_excerpts.map(e => `- ${e}`).join("\n")
-        return `<summary>\n${response.summarized_content}\n</summary>\n\n<key_excerpts>\n${excerpts_str}\n</key_excerpts>`
-    } catch (error) {
-        console.error(`Error summarizing search result: ${error}`)
-        return rawSearchResult
-    }
+export async function summarizeSearchResult(rawSearchResult: string, summarizer: BaseChatModel, retries: number) {
+  try {
+    const structuredSummarizerLlm = summarizer
+      .withStructuredOutput(SummarizedSearchResultSchema)
+      .withRetry({stopAfterAttempt: retries});
+    const response = await structuredSummarizerLlm.invoke(
+      getSummarizerPrompt(rawSearchResult),
+    );
+    const excerpts_str = response.key_excerpts.map((e) => `- ${e}`).join("\n");
+    return `<summary>\n${response.summarized_content}\n</summary>\n\n<key_excerpts>\n${excerpts_str}\n</key_excerpts>`;
+  } catch (error) {
+    console.error(`Error summarizing search result: ${error}`);
+    return rawSearchResult;
+  }
 }
 
 function getSummarizerPrompt(rawSearchResult: string) {
-    return `You are tasked with summarizing the raw content of a webpage retrieved from a web search. Your goal is to create a concise summary that preserves the most important information from the original web page. This summary will be used by a downstream research agent, so it's crucial to maintain the key details without losing essential information.
+  return `You are tasked with summarizing the raw content of a webpage retrieved from a web search. Your goal is to create a concise summary that preserves the most important information from the original web page. This summary will be used by a downstream research agent, so it's crucial to maintain the key details without losing essential information.
 Here is the raw content of the webpage:
 <webpage_content>
 ${rawSearchResult}
@@ -66,5 +70,5 @@ Example 2 (for a scientific article):
       "Without immediate and substantial reductions in greenhouse gas emissions, we are looking at potentially catastrophic sea-level rise by the end of this century," warned co-author Professor Michael Green.
    ]
 }}
-Remember, your goal is to create a summary that can be easily understood and utilized by a downstream research agent while preserving the most critical information from the original webpage.`
+Remember, your goal is to create a summary that can be easily understood and utilized by a downstream research agent while preserving the most critical information from the original webpage.`;
 }
