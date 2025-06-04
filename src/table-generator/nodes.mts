@@ -83,8 +83,6 @@ export function kickOffRowResearch(state: typeof TableGeneratorState.State) {
 export async function gatherRowUpdates(state: typeof RowResearcherState.State) {
   // TODO: Add a potential filter loop to get rid of rows that are not valid according to the criteria outlined in the question.
   // TODO: Add a retry loop to look for more base rows, and then kick off more row researchers.
-  console.log("Gathering row updates");
-  console.log("Rows: ", state.rows);
   return {};
 }
 
