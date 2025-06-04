@@ -21,10 +21,13 @@ import { START, END, StateGraph, MemorySaver } from "@langchain/langgraph";
 
 config();
 
-const baseRowGenerator = new StateGraph({
-  stateSchema: BaseRowGeneratorState,
-  output: BaseRowGeneratorOutputState,
-}, ConfigurableAnnotation)
+const baseRowGenerator = new StateGraph(
+  {
+    stateSchema: BaseRowGeneratorState,
+    output: BaseRowGeneratorOutputState,
+  },
+  ConfigurableAnnotation,
+)
   .addNode("Generate Base Row Search Queries", generateBaseRowSearchQueries)
   .addNode("Search for Base Rows", searchForBaseRows)
   .addEdge(START, "Generate Base Row Search Queries")
@@ -35,10 +38,13 @@ const baseRowGenerator = new StateGraph({
   );
 const baseRowGeneratorGraph = baseRowGenerator.compile();
 
-const rowResearcher = new StateGraph({
-  stateSchema: RowResearcherState,
-  output: RowResearcherOutputState,
-}, ConfigurableAnnotation)
+const rowResearcher = new StateGraph(
+  {
+    stateSchema: RowResearcherState,
+    output: RowResearcherOutputState,
+  },
+  ConfigurableAnnotation,
+)
   .addNode("Generate Queries for Entity", generateQueriesForEntity)
   .addNode("Update Entity Columns", updateEntityColumns, {
     ends: ["Generate Queries for Entity", END],
@@ -47,7 +53,10 @@ const rowResearcher = new StateGraph({
   .addEdge("Generate Queries for Entity", "Update Entity Columns");
 const rowResearcherGraph = rowResearcher.compile();
 
-const tableGenerator = new StateGraph(TableGeneratorState, ConfigurableAnnotation)
+const tableGenerator = new StateGraph(
+  TableGeneratorState,
+  ConfigurableAnnotation,
+)
   .addNode("Extract Table Schema", extractTableSchema)
   .addNode("Base Row Generator", baseRowGeneratorGraph)
   .addNode("Row Researcher", rowResearcherGraph)

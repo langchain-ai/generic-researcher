@@ -1,11 +1,15 @@
 import { SummarizedSearchResultSchema } from "./types.mts";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
-export async function summarizeSearchResult(rawSearchResult: string, summarizer: BaseChatModel, retries: number) {
+export async function summarizeSearchResult(
+  rawSearchResult: string,
+  summarizer: BaseChatModel,
+  retries: number,
+) {
   try {
     const structuredSummarizerLlm = summarizer
       .withStructuredOutput(SummarizedSearchResultSchema)
-      .withRetry({stopAfterAttempt: retries});
+      .withRetry({ stopAfterAttempt: retries });
     const response = await structuredSummarizerLlm.invoke(
       getSummarizerPrompt(rawSearchResult),
     );

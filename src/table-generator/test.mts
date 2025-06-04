@@ -8,8 +8,8 @@ config();
 // const config = {}
 const result = await tableGeneratorGraph.invoke(
   {
-    question: "Give me 10 restaurants in Manhattan and their best dish",
+    question: "Give me 100 restaurants in Manhattan and their best dish",
   },
-  DEFAULT_CONFIG
+  DEFAULT_CONFIG,
 );
 console.log("Final State: ", result);

@@ -45,7 +45,7 @@ export const BaseRowGeneratorState = Annotation.Root({
 export const BaseRowGeneratorOutputState = Annotation.Root({
   rows: Annotation<{
     [key: string]: z.ZodObject<Record<string, z.ZodTypeAny>>;
-  }>
+  }>,
 });
 
 export const RowResearcherState = Annotation.Root({
@@ -70,16 +70,16 @@ export const RowResearcherState = Annotation.Root({
 export const RowResearcherOutputState = Annotation.Root({
   rows: Annotation<{
     [key: string]: z.ZodObject<Record<string, z.ZodTypeAny>>;
-  }>
+  }>,
 });
 
 // Configuration
 export const ConfigurableAnnotation = Annotation.Root({
-    searchApi: Annotation<string>,
-    summarizerModel: Annotation<string>,
-    writerModel: Annotation<string>,
-    llmStructuredOutputRetries: Annotation<number>,
-    maxBaseRowSearchIterations: Annotation<number>,
-    maxSearchIterationsPerRow: Annotation<number>,
-    maxEntitySearchIterations: Annotation<number>,
-})
+  searchApi: Annotation<string>,
+  summarizerModel: Annotation<string>,
+  writerModel: Annotation<string>,
+  llmStructuredOutputRetries: Annotation<number>,
+  maxBaseRowSearchIterations: Annotation<number>,
+  maxSearchIterationsPerRow: Annotation<number>,
+  maxEntitySearchIterations: Annotation<number>,
+});

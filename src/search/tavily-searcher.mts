@@ -1,6 +1,6 @@
 import { BaseSearcher } from "./base-searcher.mts";
 import { summarizeSearchResult } from "./summarizer.mts";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models"
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES } from "../table-generator/const.mts";
 
 export class TavilySearcher extends BaseSearcher {
@@ -14,7 +14,11 @@ export class TavilySearcher extends BaseSearcher {
     }
   }
 
-  async search(queries: string[], summarizer: BaseChatModel, retries: number = DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES): Promise<string> {
+  async search(
+    queries: string[],
+    summarizer: BaseChatModel,
+    retries: number = DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES,
+  ): Promise<string> {
     const max_results = 5;
     const topic = "general";
     const include_raw_content = true;
@@ -61,7 +65,11 @@ export class TavilySearcher extends BaseSearcher {
           )
           .map(async (result) => {
             const contentToSummarize = result.raw_content || result.content;
-            const summary = await summarizeSearchResult(contentToSummarize, summarizer, retries);
+            const summary = await summarizeSearchResult(
+              contentToSummarize,
+              summarizer,
+              retries,
+            );
             return [
               result.url,
               {

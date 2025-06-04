@@ -9,15 +9,15 @@ export const DEFAULT_MAX_CONCURRENCY = 20;
 export const DEFAULT_RECURSION_LIMIT = 1000;
 
 export const DEFAULT_CONFIG = {
-    configurable: {
-        llmStructuredOutputRetries: DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES,
-        writerModel: DEFAULT_WRITER_MODEL,
-        summarizerModel: DEFAULT_SUMMARIZER_MODEL,
-        searchApi: DEFAULT_SEARCH_API,
-        maxBaseRowSearchIterations: DEFAULT_MAX_BASE_ROW_SEARCH_ITERATIONS,
-        maxSearchIterationsPerRow: DEFAULT_MAX_SEARCH_ITERATIONS_PER_ROW,
-        maxEntitySearchIterations: DEFAULT_MAX_ENTITY_SEARCH_ITERATIONS,
-    },
-    maxConcurrency: DEFAULT_MAX_CONCURRENCY,
-    recursionLimit: DEFAULT_RECURSION_LIMIT,
-}
+  configurable: {
+    llmStructuredOutputRetries: DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES,
+    writerModel: DEFAULT_WRITER_MODEL,
+    summarizerModel: DEFAULT_SUMMARIZER_MODEL,
+    searchApi: DEFAULT_SEARCH_API,
+    maxBaseRowSearchIterations: DEFAULT_MAX_BASE_ROW_SEARCH_ITERATIONS,
+    maxSearchIterationsPerRow: DEFAULT_MAX_SEARCH_ITERATIONS_PER_ROW,
+    maxEntitySearchIterations: DEFAULT_MAX_ENTITY_SEARCH_ITERATIONS,
+  },
+  maxConcurrency: DEFAULT_MAX_CONCURRENCY,
+  recursionLimit: DEFAULT_RECURSION_LIMIT,
+};

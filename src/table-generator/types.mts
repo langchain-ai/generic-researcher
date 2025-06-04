@@ -56,8 +56,10 @@ export function zodTypeToString(type: z.ZodTypeAny): string {
   if (type instanceof z.ZodNumber) return "number";
   if (type instanceof z.ZodBoolean) return "boolean";
   if (type instanceof z.ZodArray) return "array";
-  if (type instanceof z.ZodNullable) return `${zodTypeToString(type.unwrap())} (nullable)`;
-  if (type instanceof z.ZodOptional) return `${zodTypeToString(type.unwrap())} (optional)`;
+  if (type instanceof z.ZodNullable)
+    return `${zodTypeToString(type.unwrap())} (nullable)`;
+  if (type instanceof z.ZodOptional)
+    return `${zodTypeToString(type.unwrap())} (optional)`;
   return "unknown";
 }
 
