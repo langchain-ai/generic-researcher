@@ -2,6 +2,7 @@ import {
   TableGeneratorState,
   RowResearcherState,
   BaseRowGeneratorState,
+  TablePostProcessingState,
   ConfigurableAnnotation,
 } from "./state.mts";
 import {
@@ -26,13 +27,17 @@ import {
   getMinRequiredRowsPrompt,
   getGenerateAdditionalSearchQueriesPrompt,
   getParseAdditionalSearchResultsPrompt,
+  getTablePostProcessingPrompt,
 } from "./prompts.mts";
-import { buildDynamicTableSchema, Column } from "./types.mts";
+import { buildDynamicTableSchema } from "./types.mts";
 import { selectAndExecuteSearch } from "../search/search.mts";
 import { z } from "zod";
-import { Send, Command, END } from "@langchain/langgraph";
+import { Send, Command, END, getCurrentTaskInput } from "@langchain/langgraph";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { initChatModel } from "langchain/chat_models/universal";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { HumanMessage } from "@langchain/core/messages";
+
 
 /* Table Generator Nodes */
 export async function extractTableSchema(
@@ -80,10 +85,15 @@ export function kickOffRowResearch(state: typeof TableGeneratorState.State) {
     );
 }
 
-export async function gatherRowUpdates(state: typeof RowResearcherState.State) {
-  // TODO: Add a potential filter loop to get rid of rows that are not valid according to the criteria outlined in the question.
-  // TODO: Add a retry loop to look for more base rows, and then kick off more row researchers.
-  return {};
+export async function postProcessTable(state: typeof TableGeneratorState.State) {
+  const { question, rows } = state;
+  const { rows: updatedRows } = await tablePostProcessingAgent.invoke({
+    messages: [
+      new HumanMessage(`The current table is: ${JSON.stringify(rows)}, and the original user's question is: ${question}. Please post-process the table to answer the question specifically and get this table into the right format.`),
+    ],
+    rows,
+  });
+  return { rows: updatedRows };
 }
 
 /* Base Row Generator Nodes */
@@ -373,3 +383,100 @@ export async function updateEntityColumns(
     });
   }
 }
+
+/* Table Processing Nodes */
+import { tool } from "@langchain/core/tools";
+import { ToolMessage } from "@langchain/core/messages";
+
+
+const sortTableTool = tool(
+  async (input, config) => {
+    const { columnToSortBy, sortDirection } = input;
+    const currentState = getCurrentTaskInput() as typeof TableGeneratorState.State;
+    const sortedTable = Object.values(currentState.rows).sort((a, b) => {
+      return sortDirection === "asc" ? a[columnToSortBy] - b[columnToSortBy] : b[columnToSortBy] - a[columnToSortBy];
+    });
+    return new Command({
+      update: {
+        rows: sortedTable,
+        messages: [
+          new ToolMessage({
+            content: `Successfully sorted this table: ${JSON.stringify(sortedTable)}`,
+            tool_call_id: config.toolCall.id,
+          }),
+        ],
+      },
+    });
+  },
+  {
+    name: "sortTable",
+    description: "Sort a table by a given criteria",
+    schema: z.object({
+      columnToSortBy: z.string(),
+      sortDirection: z.enum(["asc", "desc"]),
+    }),
+  },
+);
+
+const filterTableTool = tool(
+  async (input, config) => {
+    const { columnToFilter, filterValue, filterType } = input;
+    const currentState = getCurrentTaskInput() as typeof TableGeneratorState.State;
+    const filteredTable = Object.values(currentState.rows).filter((row) => {
+      return filterType === "equals" ? row[columnToFilter] === filterValue : filterType === "notEquals" ? row[columnToFilter] !== filterValue : filterType === "contains" ? row[columnToFilter].includes(filterValue) : filterType === "notContains" ? !row[columnToFilter].includes(filterValue) : filterType === "greaterThan" ? row[columnToFilter] > filterValue : filterType === "lessThan" ? row[columnToFilter] < filterValue : filterType === "greaterThanOrEqual" ? row[columnToFilter] >= filterValue : row[columnToFilter] <= filterValue;
+    });
+    return new Command({
+      update: {
+        rows: filteredTable,
+        messages: [
+          new ToolMessage({
+            content: `Successfully filtered this table: ${JSON.stringify(filteredTable)}`,
+            tool_call_id: config.toolCall.id,
+          }),
+        ],
+      },
+    });
+  },
+  {
+    name: "filterTable",
+    description: "Filter a table by a given criteria. Make sure the type is right that you pass in to the filterValue!",
+    schema: z.object({
+      columnToFilter: z.string(),
+      filterValue: z.any(),
+      filterType: z.enum(["equals", "notEquals", "contains", "notContains", "greaterThan", "lessThan", "greaterThanOrEqual", "lessThanOrEqual"]),
+    }),
+  },
+);
+
+const truncateTableTool = tool(
+  async (input, config) => {
+    const { numRowsToKeep } = input;
+    const currentState = getCurrentTaskInput() as typeof TableGeneratorState.State;
+    const truncatedTable = Object.values(currentState.rows).slice(0, numRowsToKeep);
+    return new Command({
+      update: {
+        rows: truncatedTable,
+        messages: [
+          new ToolMessage({
+            content: `Successfully truncated this table: ${JSON.stringify(truncatedTable)}`,
+            tool_call_id: config.toolCall.id,
+          }),
+        ],
+      },
+    });
+  },
+  {
+    name: "truncateTable",
+    description: "Truncate a table to a given number of rows",
+    schema: z.object({
+      numRowsToKeep: z.number(),
+    }),
+  },
+);
+
+const tablePostProcessingAgent = createReactAgent({
+  llm: await initChatModel(DEFAULT_WRITER_MODEL),
+  tools: [sortTableTool, filterTableTool, truncateTableTool],
+  prompt: getTablePostProcessingPrompt(),
+  stateSchema: TablePostProcessingState,
+});

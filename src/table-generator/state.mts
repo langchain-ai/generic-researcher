@@ -1,6 +1,7 @@
-import { Annotation } from "@langchain/langgraph";
+import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import { Column } from "./types.mts";
 import { z } from "zod";
+import { BaseMessage } from "@langchain/core/messages";
 
 export const TableGeneratorState = Annotation.Root({
   question: Annotation<string>,
@@ -83,4 +84,14 @@ export const ConfigurableAnnotation = Annotation.Root({
   maxBaseRowSearchIterations: Annotation<number>,
   maxSearchIterationsPerRow: Annotation<number>,
   maxEntitySearchIterations: Annotation<number>,
+});
+
+export const TablePostProcessingState = Annotation.Root({
+  rows: Annotation<{
+    [key: string]: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  }>,
+  messages: Annotation<BaseMessage[]>({
+    reducer: messagesStateReducer,
+    default: () => [],
+  }),
 });
