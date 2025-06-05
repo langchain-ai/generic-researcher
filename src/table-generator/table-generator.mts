@@ -13,7 +13,7 @@ import {
   searchForBaseRows,
   generateQueriesForEntity,
   updateEntityColumns,
-  gatherRowUpdates,
+  postProcessTable,
   kickOffRowResearch,
   checkBaseRowSearchExitConditions,
 } from "./nodes.mts";
@@ -60,14 +60,14 @@ const tableGenerator = new StateGraph(
   .addNode("Extract Table Schema", extractTableSchema)
   .addNode("Base Row Generator", baseRowGeneratorGraph)
   .addNode("Row Researcher", rowResearcherGraph)
-  .addNode("Gather Row Updates", gatherRowUpdates)
+  .addNode("Post Process Table", postProcessTable)
   .addEdge(START, "Extract Table Schema")
   .addEdge("Extract Table Schema", "Base Row Generator")
   .addConditionalEdges("Base Row Generator", kickOffRowResearch, {
     true: "Row Researcher",
   })
-  .addEdge("Row Researcher", "Gather Row Updates")
-  .addEdge("Gather Row Updates", END);
+  .addEdge("Row Researcher", "Post Process Table")
+  .addEdge("Post Process Table", END);
 
 // const checkpointer = new MemorySaver();
 export const tableGeneratorGraph = tableGenerator.compile();

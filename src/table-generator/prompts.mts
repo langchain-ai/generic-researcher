@@ -183,3 +183,9 @@ Make sure that the types are correct for the fields that you are returning!
 It's okay if you don't know what all the fields are, the criteria fields are all optional, if you don't know the answer, just don't return the field.
 DO NOT return the field with a "filler" value in it. Just don't return the field if you don't know the value!`;
 }
+
+export function getTablePostProcessingPrompt() {
+  return `You are in charge of post-processing a table to answer a user's question. We will provide the question to you later.
+We rigorously searched the internet to populate this table, but it may contain extra or irrelevant rows to the user's question. Use your filtering tools to remove unnecessary rows until the table is ready to be shown to the user.
+You should use as many tools as you need to help you with the post-processing. When possible, try to return the right number of rows to the user. When you are done processing, stop calling tools.`;
+}
