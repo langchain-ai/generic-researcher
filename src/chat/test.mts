@@ -4,7 +4,6 @@ import { HumanMessage } from "@langchain/core/messages";
 
 config();
 
-
 // const result = await chatAgentGraph.invoke(
 //   {
 //     messages: [

@@ -13,4 +13,3 @@ export const ChatAgentState = Annotation.Root({
   primaryKey: Annotation<Column>,
   criteria: Annotation<Column[]>,
 });
-

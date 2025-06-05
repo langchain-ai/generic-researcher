@@ -39,7 +39,8 @@ export const BaseRowGeneratorState = Annotation.Root({
     },
   }),
   researchAttempts: Annotation<number>,
-  minRequiredRows: Annotation<number | undefined>,
+  requiredRowsForSearch: Annotation<number | undefined>,
+  targetRows: Annotation<number | undefined>,
 });
 
 export const BaseRowGeneratorOutputState = Annotation.Root({

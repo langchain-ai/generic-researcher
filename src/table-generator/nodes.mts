@@ -108,13 +108,16 @@ export async function generateBaseRowSearchQueries(
     researchAttempts: researchAttempts + 1,
   };
 
-  if (!state.minRequiredRows) {
+  if (!state.requiredRowsForSearch || !state.targetRows) {
     try {
-      const { minRequiredRows } = await (await initChatModel(writerModel))
+      const { requiredRowsForSearch, targetRows } = await (
+        await initChatModel(writerModel)
+      )
         .withStructuredOutput(MinRequiredRowsSchema)
         .withRetry({ stopAfterAttempt: llmStructuredOutputRetries })
         .invoke(getMinRequiredRowsPrompt(question));
-      stateUpdate.minRequiredRows = minRequiredRows;
+      stateUpdate.requiredRowsForSearch = requiredRowsForSearch;
+      stateUpdate.targetRows = targetRows;
     } catch (error) {
       console.error("Error generating minimum required rows:", error);
     }
@@ -125,7 +128,7 @@ export async function generateBaseRowSearchQueries(
         question,
         primaryKey,
         criteria,
-        stateUpdate.minRequiredRows || state.minRequiredRows!,
+        stateUpdate.requiredRowsForSearch || state.requiredRowsForSearch!,
       )
     : getGenerateAdditionalSearchQueriesPrompt(
         question,
@@ -133,7 +136,7 @@ export async function generateBaseRowSearchQueries(
         criteria,
         rows,
         historicalRowSearchQueries,
-        stateUpdate.minRequiredRows || state.minRequiredRows!,
+        stateUpdate.requiredRowsForSearch || state.requiredRowsForSearch!,
       );
   try {
     const { queries } = await (await initChatModel(writerModel))
@@ -214,7 +217,7 @@ export async function searchForBaseRows(
       {} as Record<string, z.ZodObject<Record<string, z.ZodTypeAny>>>,
     );
 
-    console.log(`New parsed rows: ${Object.keys(newParsedRows).join(", ")}`);
+    console.log(`Parsed rows: ${Object.keys(newParsedRows).join(", ")}`);
     console.log(
       `Total rows: ${Object.keys({ ...rows, ...newParsedRows }).length}`,
     );
@@ -232,29 +235,29 @@ export function checkBaseRowSearchExitConditions(
   state: typeof BaseRowGeneratorState.State,
   config: RunnableConfig<typeof ConfigurableAnnotation.State>,
 ) {
-  const { rows, minRequiredRows, researchAttempts } = state;
+  const { rows, requiredRowsForSearch, researchAttempts } = state;
   const {
     maxBaseRowSearchIterations = DEFAULT_MAX_BASE_ROW_SEARCH_ITERATIONS,
   } = config.configurable || {};
 
-  if (!minRequiredRows) {
+  if (!requiredRowsForSearch) {
     return "Generate Base Row Search Queries";
   }
 
   const currentRowCount = Object.keys(rows).length;
   const hasReachedMaxAttempts = researchAttempts >= maxBaseRowSearchIterations;
-  const hasMetRowRequirement = currentRowCount >= minRequiredRows;
+  const hasMetRowRequirement = currentRowCount >= requiredRowsForSearch;
 
   if (hasReachedMaxAttempts || hasMetRowRequirement) {
     console.log(
-      `Base row search exit conditions met: ${currentRowCount} >= ${minRequiredRows} or ` +
+      `Base row search exit conditions met: ${currentRowCount} >= ${requiredRowsForSearch} or ` +
         `${researchAttempts} > ${maxBaseRowSearchIterations}`,
     );
     return END;
   }
 
   console.log(
-    `Base row search exit conditions not met: ${currentRowCount} < ${minRequiredRows} and ` +
+    `Base row search exit conditions not met: ${currentRowCount} < ${requiredRowsForSearch} and ` +
       `${researchAttempts} <= ${maxBaseRowSearchIterations}`,
   );
   return "Generate Base Row Search Queries";

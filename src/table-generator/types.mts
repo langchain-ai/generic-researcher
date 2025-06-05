@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const MinRequiredRowsSchema = z.object({
-  minRequiredRows: z.number(),
+  requiredRowsForSearch: z.number(),
+  targetRows: z.number(),
 });
 
 export const ColumnSchema = z.object({
