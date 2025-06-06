@@ -46,7 +46,8 @@ export async function extractTableSchema(
   config: RunnableConfig<typeof ConfigurableAnnotation.State>,
 ) {
   const { messages } = state;
-  const lastMessage = messages[messages.length - 1].content as string;
+  const lastMessage = messages[messages.length - 1].content[0]["text"] ?? messages[messages.length - 1].content;
+  console.log(lastMessage);
   const {
     llmStructuredOutputRetries = DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES,
     writerModel = DEFAULT_WRITER_MODEL,
@@ -59,13 +60,12 @@ export async function extractTableSchema(
       .withRetry({ stopAfterAttempt: llmStructuredOutputRetries })
       .invoke(prompt);
 
-    const interruptMessage = `Please provide feedback on the table schema. If you are happy with it, say 'yes'. If you are not happy with it, say 'no' and provide feedback on what you would like to change.
-    The current schema is:
-    Primary Key:
-    ${primaryKey.name} - ${primaryKey.description}
-    Additional Columns:
-    ${criteria.map((c) => `${c.name} - ${c.description}`).join("\n")}
-    `;
+    const interruptMessage = `The current schema is:
+Primary Key:
+${primaryKey.name} - ${primaryKey.description}
+Additional Columns:
+${criteria.map((c) => `${c.name} - ${c.description}`).join("\n")}`;
+    console.log(interruptMessage);
     const response = interrupt(interruptMessage);
     console.log(response);
     if (response === "yes") {
