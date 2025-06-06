@@ -4,6 +4,10 @@ import { z } from "zod";
 import { BaseMessage } from "@langchain/core/messages";
 
 export const TableGeneratorState = Annotation.Root({
+  messages: Annotation<BaseMessage[]>({
+    reducer: messagesStateReducer,
+    default: () => [],
+  }),
   question: Annotation<string>,
   primaryKey: Annotation<Column>,
   criteria: Annotation<Column[]>,

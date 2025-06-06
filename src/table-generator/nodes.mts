@@ -20,6 +20,7 @@ import {
 } from "./types.mts";
 import {
   getExtractTableSchemaPrompt,
+  getExtractTableSchemaPromptIteration,
   getGenerateInitialSearchQueriesPrompt,
   getParseSearchResultsPrompt,
   getGenerateEntitySearchQueriesPrompt,
@@ -32,7 +33,7 @@ import {
 import { buildDynamicTableSchema } from "./types.mts";
 import { selectAndExecuteSearch } from "../search/search.mts";
 import { z } from "zod";
-import { Send, Command, END, getCurrentTaskInput } from "@langchain/langgraph";
+import { Send, Command, END, getCurrentTaskInput, interrupt } from "@langchain/langgraph";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { initChatModel } from "langchain/chat_models/universal";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
@@ -44,18 +45,35 @@ export async function extractTableSchema(
   state: typeof TableGeneratorState.State,
   config: RunnableConfig<typeof ConfigurableAnnotation.State>,
 ) {
-  const { question } = state;
+  const { messages } = state;
+  const lastMessage = messages[messages.length - 1].content as string;
   const {
     llmStructuredOutputRetries = DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES,
     writerModel = DEFAULT_WRITER_MODEL,
   } = config.configurable || {};
 
-  const { primaryKey, criteria } = await (await initChatModel(writerModel))
-    .withStructuredOutput(TableExtractionSchema)
-    .withRetry({ stopAfterAttempt: llmStructuredOutputRetries })
-    .invoke(getExtractTableSchemaPrompt(question));
+  let prompt = getExtractTableSchemaPrompt(lastMessage);
+  while (true) {
+    const { primaryKey, criteria } = await (await initChatModel(writerModel))
+      .withStructuredOutput(TableExtractionSchema)
+      .withRetry({ stopAfterAttempt: llmStructuredOutputRetries })
+      .invoke(prompt);
 
-  return { primaryKey, criteria };
+    const interruptMessage = `Please provide feedback on the table schema. If you are happy with it, say 'yes'. If you are not happy with it, say 'no' and provide feedback on what you would like to change.
+    The current schema is:
+    Primary Key:
+    ${primaryKey.name} - ${primaryKey.description}
+    Additional Columns:
+    ${criteria.map((c) => `${c.name} - ${c.description}`).join("\n")}
+    `;
+    const response = interrupt(interruptMessage);
+    console.log(response);
+    if (response === "yes") {
+      return { primaryKey, criteria, question: lastMessage };
+    } else {
+      prompt = getExtractTableSchemaPromptIteration(lastMessage, response, primaryKey, criteria);
+    }
+  }
 }
 
 export function kickOffRowResearch(state: typeof TableGeneratorState.State) {

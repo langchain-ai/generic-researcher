@@ -19,6 +19,32 @@ You should aim to have fewer than 7 total columns in the table, unless the user 
 ${getTodayString()}`;
 }
 
+export function getExtractTableSchemaPromptIteration(question: string, feedback: string, primaryKey: Column, criteria: Column[]) {
+    return `You are in charge of interpreting a user's question and creating the schema for a table that will be provided to the user to answer their question.
+  The question from the user is: ${question}
+  
+  The table schema consists of column names from two categories: primary key and criteria.
+  For each column name that you specify, you should provide a short description of that column. You should also provide the type of the column, as a string. You can use "string", "number", "boolean", or "array" as the type.
+  
+  The primary key is the column that uniquely identifies each row in the table. It should be a string, and the most important column in the whole table.
+  The criteria are columns that will be helpful to the user to answer their question, and filter and sort the table. These should be explicit from the users question, or inferred to be important. Use your best reasoning and judgement to come up with these criteria.
+  
+  You should aim to have fewer than 7 total columns in the table, unless the user explicitly asks for more than 7.
+  ${getTodayString()}
+  
+  This is the last schema that you tried to generate:
+  Primary Key:
+  ${primaryKey.name} - ${primaryKey.description}
+  Criteria Columns:
+  ${criteria.map((c) => `${c.name} - ${c.description}`).join("\n")}
+
+  This is the feedback that you received:
+  ${feedback}
+
+  Please generate a new schema that incorporates the feedback.
+  `;
+  }
+
 export function getMinRequiredRowsPrompt(question: string) {
   return `You are in charge of determining the minimum number of rows that you should search for in order to effectively answer the user's question. Along with the actual target number of rows you should return to the user.
 The question from the user is: ${question}

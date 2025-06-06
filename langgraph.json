@@ -3,8 +3,7 @@
   "dockerfile_lines": [],
   "dependencies": ["."],
   "graphs": {
-    "table-generator": "./src/table-generator/table-generator.mts:tableGeneratorGraph",
-    "chat-agent": "./src/chat/chat-agent.mts:chatAgentGraph"
+    "table-generator": "./src/table-generator/table-generator.mts:tableGeneratorGraph"
   },
   "env": ".env"
 }
