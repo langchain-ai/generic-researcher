@@ -423,7 +423,7 @@ const filterTableTool = tool(
     const { columnToFilter, filterValue, filterType } = input;
     const currentState = getCurrentTaskInput() as typeof TableGeneratorState.State;
     const filteredTable = Object.values(currentState.rows).filter((row) => {
-      return filterType === "equals" ? row[columnToFilter] === filterValue : filterType === "notEquals" ? row[columnToFilter] !== filterValue : filterType === "contains" ? row[columnToFilter].includes(filterValue) : filterType === "notContains" ? !row[columnToFilter].includes(filterValue) : filterType === "greaterThan" ? row[columnToFilter] > filterValue : filterType === "lessThan" ? row[columnToFilter] < filterValue : filterType === "greaterThanOrEqual" ? row[columnToFilter] >= filterValue : row[columnToFilter] <= filterValue;
+      return filterType === "equals" ? row[columnToFilter] === filterValue : filterType === "notEquals" ? row[columnToFilter] !== filterValue : filterType === "greaterThan" ? row[columnToFilter] > filterValue : filterType === "lessThan" ? row[columnToFilter] < filterValue : filterType === "greaterThanOrEqual" ? row[columnToFilter] >= filterValue : row[columnToFilter] <= filterValue;
     });
     return new Command({
       update: {
@@ -443,7 +443,7 @@ const filterTableTool = tool(
     schema: z.object({
       columnToFilter: z.string(),
       filterValue: z.any(),
-      filterType: z.enum(["equals", "notEquals", "contains", "notContains", "greaterThan", "lessThan", "greaterThanOrEqual", "lessThanOrEqual"]),
+      filterType: z.enum(["equals", "notEquals", "greaterThan", "lessThan", "greaterThanOrEqual", "lessThanOrEqual"]),
     }),
   },
 );
