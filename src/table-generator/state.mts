@@ -8,6 +8,7 @@ export const TableGeneratorState = Annotation.Root({
     reducer: messagesStateReducer,
     default: () => [],
   }),
+  schemaFeedback: Annotation<string | null>,
   question: Annotation<string>,
   primaryKey: Annotation<Column>,
   criteria: Annotation<Column[]>,

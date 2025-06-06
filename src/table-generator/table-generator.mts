@@ -16,6 +16,8 @@ import {
   postProcessTable,
   kickOffRowResearch,
   checkBaseRowSearchExitConditions,
+  getUserFeedback,
+  checkSchemaFeedbackExitConditions,
 } from "./nodes.mts";
 import { START, END, StateGraph, MemorySaver } from "@langchain/langgraph";
 
@@ -58,11 +60,16 @@ const tableGenerator = new StateGraph(
   ConfigurableAnnotation,
 )
   .addNode("Extract Table Schema", extractTableSchema)
+  .addNode("Get User Feedback", getUserFeedback)
   .addNode("Base Row Generator", baseRowGeneratorGraph)
   .addNode("Row Researcher", rowResearcherGraph)
   .addNode("Post Process Table", postProcessTable)
   .addEdge(START, "Extract Table Schema")
-  .addEdge("Extract Table Schema", "Base Row Generator")
+  .addEdge("Extract Table Schema", "Get User Feedback")
+  .addConditionalEdges("Get User Feedback", checkSchemaFeedbackExitConditions, {
+    "Base Row Generator": "Base Row Generator",
+    "Extract Table Schema": "Extract Table Schema",
+  })
   .addConditionalEdges("Base Row Generator", kickOffRowResearch, {
     true: "Row Researcher",
   })

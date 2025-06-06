@@ -45,35 +45,44 @@ export async function extractTableSchema(
   state: typeof TableGeneratorState.State,
   config: RunnableConfig<typeof ConfigurableAnnotation.State>,
 ) {
-  const { messages } = state;
+  const { messages, schemaFeedback = null, primaryKey, criteria } = state;
   const lastMessage = messages[messages.length - 1].content[0]["text"] ?? messages[messages.length - 1].content;
-  console.log(lastMessage);
+
   const {
     llmStructuredOutputRetries = DEFAULT_LLM_STRUCTURED_OUTPUT_RETRIES,
     writerModel = DEFAULT_WRITER_MODEL,
   } = config.configurable || {};
 
-  let prompt = getExtractTableSchemaPrompt(lastMessage);
-  while (true) {
-    const { primaryKey, criteria } = await (await initChatModel(writerModel))
-      .withStructuredOutput(TableExtractionSchema)
-      .withRetry({ stopAfterAttempt: llmStructuredOutputRetries })
-      .invoke(prompt);
+  const extractionPrompt = (schemaFeedback && primaryKey && criteria) ? getExtractTableSchemaPromptIteration(lastMessage, schemaFeedback, primaryKey, criteria) : getExtractTableSchemaPrompt(lastMessage);
+  const { primaryKey: newPrimaryKey, criteria: newCriteria } = await (await initChatModel(writerModel))
+    .withStructuredOutput(TableExtractionSchema)
+    .withRetry({ stopAfterAttempt: llmStructuredOutputRetries })
+    .invoke(extractionPrompt);
 
-    const interruptMessage = `The current schema is:
-Primary Key:
-${primaryKey.name} - ${primaryKey.description}
-Additional Columns:
-${criteria.map((c) => `${c.name} - ${c.description}`).join("\n")}`;
-    console.log(interruptMessage);
-    const response = interrupt(interruptMessage);
-    console.log(response);
-    if (response === "yes") {
-      return { primaryKey, criteria, question: lastMessage };
-    } else {
-      prompt = getExtractTableSchemaPromptIteration(lastMessage, response, primaryKey, criteria);
-    }
+  return { primaryKey: newPrimaryKey, criteria: newCriteria, question: lastMessage };
+}
+
+export async function getUserFeedback(state: typeof TableGeneratorState.State) {
+  const { primaryKey, criteria } = state;
+  const interruptMessage = `The current schema is:
+  Primary Key:
+  ${primaryKey.name} - ${primaryKey.description}
+  Additional Columns:
+  ${criteria.map((c) => `${c.name} - ${c.description}`).join("\n")}`;
+  const response = interrupt(interruptMessage);
+  if (response === "yes") {
+    return { schemaFeedback: null };
+  } else {
+    return { schemaFeedback: response };
   }
+}
+
+export function checkSchemaFeedbackExitConditions(state: typeof TableGeneratorState.State) {
+  const { schemaFeedback } = state;
+  if (schemaFeedback === null) {
+    return "Base Row Generator";
+  }
+  return "Extract Table Schema";
 }
 
 export function kickOffRowResearch(state: typeof TableGeneratorState.State) {
