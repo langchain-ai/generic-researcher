@@ -17,6 +17,9 @@ export const TableGeneratorState = Annotation.Root({
       };
     },
   }),
+  finalTable: Annotation<{
+    [key: string]: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  }>
 });
 
 export const BaseRowGeneratorState = Annotation.Root({

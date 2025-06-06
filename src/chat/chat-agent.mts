@@ -28,7 +28,7 @@ const createTableTool = tool(
     );
     return new Command({
       update: {
-        table: result["rows"],
+        table: result["finalTable"],
         messages: [
           new ToolMessage({
             content: `Successfully generated this table: ${JSON.stringify(result["rows"])}`,

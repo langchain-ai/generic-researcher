@@ -4,11 +4,11 @@ import { HumanMessage } from "@langchain/core/messages";
 
 config();
 
-// const result = await chatAgentGraph.invoke(
-//   {
-//     messages: [
-//         new HumanMessage("I want to know the best 5 restaurants in Chelsea, Manhattan"),
-//     ],
-//   }
-// );
-// console.log("Final State: ", result);
+const result = await chatAgentGraph.invoke(
+  {
+    messages: [
+        new HumanMessage("What are the 5 best sushi restaurants in Chelsea, Manhattan that offer omakase, ranked in order of how cheap they are"),
+    ],
+  }
+);
+console.log("Final State: ", result);

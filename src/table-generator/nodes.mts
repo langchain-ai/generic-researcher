@@ -93,7 +93,7 @@ export async function postProcessTable(state: typeof TableGeneratorState.State) 
     ],
     rows,
   });
-  return { rows: updatedRows };
+  return { finalTable: updatedRows };
 }
 
 /* Base Row Generator Nodes */
