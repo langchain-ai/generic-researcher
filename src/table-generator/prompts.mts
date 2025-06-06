@@ -187,5 +187,6 @@ DO NOT return the field with a "filler" value in it. Just don't return the field
 export function getTablePostProcessingPrompt() {
   return `You are in charge of post-processing a table to answer a user's question. We will provide the question to you later.
 We rigorously searched the internet to populate this table, but it may contain extra or irrelevant rows to the user's question. Use your filtering tools to remove unnecessary rows until the table is ready to be shown to the user.
-You should use as many tools as you need to help you with the post-processing. When possible, try to return the right number of rows to the user. When you are done processing, stop calling tools.`;
+You should use as many tools as you need to help you with the post-processing. When possible, try to return the right number of rows to the user. When you are done processing, stop calling tools.
+Only filter the table if it is absolutely necessary, and you are sure that your filter won't get rid of too many rows! String match filters should only be used when the column is like a categorical value`;
 }

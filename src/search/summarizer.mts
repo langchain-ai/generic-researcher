@@ -9,7 +9,10 @@ export async function summarizeSearchResult(
   try {
     const structuredSummarizerLlm = summarizer
       .withStructuredOutput(SummarizedSearchResultSchema)
-      .withRetry({ stopAfterAttempt: retries });
+      .withRetry({ stopAfterAttempt: retries })
+      .withConfig({     // NOTE: We need to add this to avoid UI streaming
+        tags: ["langsmith:nostream"], 
+      });
     const response = await structuredSummarizerLlm.invoke(
       getSummarizerPrompt(rawSearchResult),
     );
