@@ -65,10 +65,10 @@ export async function extractTableSchema(
 export async function getUserFeedback(state: typeof TableGeneratorState.State) {
   const { primaryKey, criteria } = state;
   const interruptMessage = `The current schema is:
-  Primary Key:
-  ${primaryKey.name} - ${primaryKey.description}
-  Additional Columns:
-  ${criteria.map((c) => `${c.name} - ${c.description}`).join("\n")}`;
+Primary Key:
+- ${primaryKey.name}: ${primaryKey.description}
+Additional Columns:
+${criteria.map((c) => `- ${c.name}: ${c.description}`).join("\n")}`;
   const response = interrupt(interruptMessage);
   if (response === "yes") {
     return { schemaFeedback: null };
